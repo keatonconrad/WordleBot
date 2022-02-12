@@ -1,7 +1,10 @@
 from enum import Enum
 import random
-
-MAX_TRIES = 6
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
+from tqdm import trange
+from statistics import mean
 
 class LetterResult(Enum):
     GREEN = 0
@@ -23,18 +26,21 @@ class WordleBot:
         self.last_score = []
         self.guesses = []
         self.won = False
+        self.logging = False
         
     
     def play(self):
         self.answer = random.choice(self.all_words)
 
-        for i in range(MAX_TRIES):
+        while True:
             candidates = self.get_candidates()
             guess = random.choice(candidates)
             score = self.score_guess(guess)
             if all([result[2] == LetterResult.GREEN for result in score]):
-                print('You won!')
-                self.won = True
+                if len(self.guesses) <= 6:
+                    self.won = True
+                    if self.logging:
+                        print('You won!')
                 break
 
 
@@ -80,7 +86,8 @@ class WordleBot:
             else:
                 score.append((guess[i], i, LetterResult.BLACK))
 
-        self.print_score(score)
+        if self.logging:
+            self.print_score(score)
         self.scores.append(score)
         self.last_score = score
         return score
@@ -97,6 +104,24 @@ class WordleBot:
         print(' '.join(result))
 
 
+class Tester:
+    def __init__(self, num_trials):
+        self.win_counter = 0  # Number of times correct word was guessed within 6 tries
+        self.num_guesses = []  # Array of how many tries it took to guess each word
+        self.num_trials = num_trials or 100
+
+    def play_game(self):
+        for i in trange(self.num_trials):
+            w = WordleBot()
+            w.play()
+            self.num_guesses.append(len(w.guesses))
+            if w.won:
+                self.win_counter += 1
+
 if __name__ == '__main__':
-    w = WordleBot()
-    w.play()
+    w = Tester(num_trials=50000)
+    w.play_game()
+    print(f'% won within 6 guesses: {w.win_counter / w.num_trials}')
+    print(f'Average num. guesses: {mean(w.num_guesses)}')
+    sns.histplot(data=np.array(w.num_guesses), binrange=(1, max(w.num_guesses)))
+    plt.show()
